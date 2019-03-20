@@ -11,8 +11,13 @@ class SudokuField
 
     public:
         SudokuField();
-        void print() const;
+        void print_values() const;
+        void print_values_excluded() const;
         void read_from_file(const std::string& filename);
+        void solve();
+
+    private:
+        void exclude_values();
 };
 
 #endif
