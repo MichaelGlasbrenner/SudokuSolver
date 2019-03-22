@@ -12,12 +12,12 @@ int main()
     the_field.read_from_file("input_field"); // FIXME
 
     the_field.print_values();
-    the_field.print_values_excluded();
+    //the_field.print_values_excluded();
 
     the_field.solve();
 
     the_field.print_values();
-    the_field.print_values_excluded();
+    //the_field.print_values_excluded();
 }
 
 
