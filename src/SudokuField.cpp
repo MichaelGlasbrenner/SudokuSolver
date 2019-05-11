@@ -3,6 +3,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <ctime>    // For time()
+#include <cstdlib>  // For srand() and rand()
 
 
 SudokuField::SudokuField()
@@ -22,6 +25,35 @@ SudokuField::SudokuField()
             for(int k=1; k <= 9; ++k)
             {
                 _values_excluded[row][col][k] = false;
+            }
+        }
+    }
+}
+
+
+SudokuField::SudokuField(const SudokuField& other)
+{
+    this->copy_values(other);    
+}
+
+
+void SudokuField::copy_values(const SudokuField& other)
+{
+    for(int row=0; row<9; ++row)
+    {
+        for(int col=0; col<9; ++col)
+        {
+            _values[row][col] = other._values[row][col];
+        }
+    }
+
+    for(int row=0; row<9; ++row)
+    {
+        for(int col=0; col<9; ++col)
+        {
+            for(int k=1; k <= 9; ++k)
+            {
+                _values_excluded[row][col][k] = other._values_excluded[row][col][k];
             }
         }
     }
@@ -87,18 +119,189 @@ void SudokuField::read_from_file(const std::string& filename)
         myfile.close();
     }
     else std::cout << "Unable to open file";
-
 }
 
 
-void SudokuField::solve()
+bool SudokuField::solve()
 {
+    bool solved_by_exclusion = this->solve_by_exclusion_only(); 
+
+    if(solved_by_exclusion) return true;
+
+    int number_of_solved_fields =  this->get_number_of_solved_fields();
+
+    for(int n_fields_to_guess=0; n_fields_to_guess < (81 - number_of_solved_fields); ++n_fields_to_guess)
+    {
+       printf("trying to find solution by guessing %d fields \n", n_fields_to_guess);
+       for(int trial=0; trial < 1000; ++trial) // FIXME
+       {
+           bool found_solution = this->solve_with_guessing(n_fields_to_guess);
+           if(found_solution == true) return true;
+       }
+    }
+
+    return false;
+}
+
+
+bool SudokuField::solve_with_guessing(int n_fields_to_guess)
+{
+    SudokuField copied_field(*this);
+
+    copied_field.apply_guess(n_fields_to_guess);
+
+    bool found_solution = copied_field.solve_by_exclusion_only();
+
+    if(found_solution == true)
+    {
+        this->copy_values(copied_field);
+        return true;
+    }
+
+    return false;
+}
+
+
+void SudokuField::apply_guess(int n_fields_to_guess)
+{
+    srand(time(0));
+
+    struct field
+    {
+       int row;
+       int col;
+    };
+
+    auto get_list_of_free_fields = [=] (std::vector<field>& free_fields)
+    {
+        free_fields.clear();
+
+        for(int row=0; row<9; ++row)
+        {
+            for(int col=0; col<9; ++col)
+            {
+                int current_value = _values[row][col];
+
+                field current_field;
+                current_field.row = row;
+                current_field.col = col;
+
+                if(current_value == 0) free_fields.push_back(current_field);
+            }
+        }
+    };
+
+    auto get_random_number = [=] (int& random_number, int lower_limit, int upper_limit)
+    {    
+        srand(time(0));
+
+        random_number = ((rand() % upper_limit) + lower_limit);
+    };
+
+    int guesses_remaining = n_fields_to_guess;
+    std::vector<field> all_free_fields; 
+    get_list_of_free_fields(all_free_fields); 
+
+    while(guesses_remaining > 0)
+    {
+        int remaining_free_fields = all_free_fields.size();
+        
+        int random_position;
+        get_random_number(random_position, 0, remaining_free_fields-1);
+
+        const field& random_field = all_free_fields.at(random_position);
+
+        int random_val; 
+        get_random_number(random_val, 1,10);
+
+        _values[random_field.row][random_field.col] = random_val;
+
+        all_free_fields.erase(all_free_fields.begin() + random_position);
+
+        guesses_remaining--;
+    }
+}
+
+
+bool SudokuField::solve_by_exclusion_only()
+{
+    int number_of_solved_fields =  this->get_number_of_solved_fields();
+    int previous_number_of_solved_fields = number_of_solved_fields;
+
     for(int iter=0; iter<100; ++iter)
     {
+        printf("starting iteration %d \n", iter);
         this->exclude_values();
 
         this->set_new_values();
+
+        int number_of_solved_fields = this->get_number_of_solved_fields();
+
+        if(number_of_solved_fields == 81) return true; // all fields found
+
+        if(number_of_solved_fields == previous_number_of_solved_fields) // this means no progress in the last iteration
+        {
+           return false;
+        }
+
+        previous_number_of_solved_fields = number_of_solved_fields;
     }
+
+    return false;
+}
+
+
+int SudokuField::get_number_of_solved_fields()
+{
+    int n_solved = 0;
+
+    for(int row=0; row<9; ++row)
+    {
+        for(int col=0; col<9; ++col)
+        {
+            int current_value = _values[row][col];
+
+            if(current_value > 0) n_solved++;
+        }
+    }
+   
+    return n_solved;
+}
+
+
+std::vector<std::vector<int>> SudokuField::generate_guesses(int n_fields_to_guess)
+{
+   std::vector<std::vector<int>> guesses;
+   guesses.resize(n_fields_to_guess);
+
+   /*auto find_free_field = [] ()
+   {
+       
+   };
+
+   int current_start_row = 0;
+   int current_start_col = 0;
+
+   while(remaining_fields_to_guess > 0)
+   {
+       for(int row=current_start_row; row<9; ++row)
+       {
+           for(int col=current_start_col; col<9; ++col)
+           {
+
+           }
+       }
+
+       for(int row=current_start_row+1; row<9; ++row)
+       {
+           for(int col=0; col<9; ++col)
+           {
+
+           }
+       }
+   }*/
+
+   return guesses;
 }
 
 
@@ -261,5 +464,4 @@ void SudokuField::get_block_borders(block the_block, int& start_col, int& start_
 
     end_row = start_row + 2;
     end_col = start_col + 2;
-
 }
