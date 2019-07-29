@@ -28,6 +28,9 @@ SudokuField::SudokuField()
             }
         }
     }
+    
+    // seed the random number generator
+    srand(time(0));
 }
 
 
@@ -62,7 +65,7 @@ void SudokuField::copy_values(const SudokuField& other)
 
 void SudokuField::print_values() const
 {
-    printf("the Sudoku field : \n\n");
+    printf("\nthe Sudoku field : \n\n");
 
     for(int row=0; row<9; ++row)
     {
@@ -70,7 +73,9 @@ void SudokuField::print_values() const
         for(int col=0; col<9; ++col)
         {
             printf("%d ", _values[row][col]);
+            if(col==2 || col == 5) printf("  ");
         }
+        if(row==2 || row == 5) printf("\n");
         printf("\n");
     }
     printf("\n\n");
@@ -130,11 +135,12 @@ bool SudokuField::solve()
 
     int number_of_solved_fields =  this->get_number_of_solved_fields();
 
-    for(int n_fields_to_guess=0; n_fields_to_guess < (81 - number_of_solved_fields); ++n_fields_to_guess)
+    for(int n_fields_to_guess=1; n_fields_to_guess < (81 - number_of_solved_fields); ++n_fields_to_guess)
     {
-       printf("trying to find solution by guessing %d fields \n", n_fields_to_guess);
+       printf("\ntrying to find solution by guessing %d fields \n", n_fields_to_guess);
        for(int trial=0; trial < 1000; ++trial) // FIXME
        {
+           printf("trial %d \n", trial);
            bool found_solution = this->solve_with_guessing(n_fields_to_guess);
            if(found_solution == true) return true;
        }
@@ -150,10 +156,22 @@ bool SudokuField::solve_with_guessing(int n_fields_to_guess)
 
     copied_field.apply_guess(n_fields_to_guess);
 
+    if( ! copied_field.check_consistency())
+    {
+       return false;
+    }
+
     bool found_solution = copied_field.solve_by_exclusion_only();
 
     if(found_solution == true)
     {
+        printf("found solution after guessing\n");
+
+        if( ! copied_field.check_consistency())
+        {
+            printf("inconsistent field after guessing \n");
+        }
+
         this->copy_values(copied_field);
         return true;
     }
@@ -164,8 +182,6 @@ bool SudokuField::solve_with_guessing(int n_fields_to_guess)
 
 void SudokuField::apply_guess(int n_fields_to_guess)
 {
-    srand(time(0));
-
     struct field
     {
        int row;
@@ -193,8 +209,6 @@ void SudokuField::apply_guess(int n_fields_to_guess)
 
     auto get_random_number = [=] (int& random_number, int lower_limit, int upper_limit)
     {    
-        srand(time(0));
-
         random_number = ((rand() % upper_limit) + lower_limit);
     };
 
@@ -214,6 +228,7 @@ void SudokuField::apply_guess(int n_fields_to_guess)
         int random_val; 
         get_random_number(random_val, 1,10);
 
+        printf("setting [%d][%d] to value %d \n", random_field.row, random_field.col, random_val);
         _values[random_field.row][random_field.col] = random_val;
 
         all_free_fields.erase(all_free_fields.begin() + random_position);
@@ -353,6 +368,10 @@ void SudokuField::set_new_values()
             {
                printf("setting field[%d,%d] to value %d \n", row, col, value_for_setting);
                _values[row][col] = value_for_setting;
+                
+                this->exclude_in_row(row, col, value_for_setting);
+                this->exclude_in_col(row, col, value_for_setting);
+                this->exclude_in_block(row, col,value_for_setting);
             }
         }
     }
@@ -464,4 +483,82 @@ void SudokuField::get_block_borders(block the_block, int& start_col, int& start_
 
     end_row = start_row + 2;
     end_col = start_col + 2;
+}
+
+
+bool SudokuField::check_consistency()
+{
+    bool field_is_consistent = true;
+
+    // each number only once per column
+    for(int row=0; row<9; ++row)
+    {
+        std::vector<int> occurencies;
+        for(int i=0; i<10; ++i) occurencies.push_back(0);
+
+        for(int col=0; col<9; ++col)
+        {
+            printf("val[%d]: %d \n", col, _values[row][col] );
+            int value = _values[row][col];
+            occurencies[value] += 1;
+        }
+        
+        for(int i=1; i<10; ++i) 
+        {
+            printf("occurencies[%d] : %d \n", i, occurencies[i]);
+            if(occurencies[i] > 1) return false;
+        }
+    }
+
+    // each number only once per row
+    for(int col=0; col<9; ++col)
+    {
+        std::vector<int> occurencies;
+        for(int i=0; i<10; ++i) occurencies.push_back(0);
+
+        for(int row=0; row<9; ++row)
+        {
+            int value = _values[row][col];
+            occurencies[value] += 1;
+        }
+
+        for(int i=1; i<10; ++i) 
+        {
+            if(occurencies[i] > 1) return false;
+        }
+    }
+
+    // each number only once per 3x3 block
+    auto check_3by3_block = [&](int upper_left_row, int upper_left_col) -> bool
+    {
+        std::vector<int> occurencies;
+        for(int i=0; i<10; ++i) occurencies.push_back(0);
+
+        for(int col=upper_left_col; col<upper_left_col+3; ++col)
+        {
+            for(int row=upper_left_row; row<upper_left_row+3; ++row)
+            {
+                int value = _values[row][col];
+                occurencies[value] += 1;
+            }
+        }
+
+        for(int i=1; i<10; ++i) 
+        {
+            if(occurencies[i] > 1) return false;
+        }
+
+    };
+
+    check_3by3_block(0,0);
+    check_3by3_block(3,0);
+    check_3by3_block(6,0);
+    check_3by3_block(0,3);
+    check_3by3_block(3,3);
+    check_3by3_block(6,3);
+    check_3by3_block(0,6);
+    check_3by3_block(3,6);
+    check_3by3_block(6,6);
+
+    return field_is_consistent;
 }

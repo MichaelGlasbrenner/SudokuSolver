@@ -43,6 +43,8 @@ class SudokuField
         int get_number_of_solved_fields();
         std::vector<std::vector<int>> generate_guesses(int n_fields_to_guess);
         void apply_guess(int n_fields_to_guess);
+
+        bool check_consistency();
 };
 
 #endif
