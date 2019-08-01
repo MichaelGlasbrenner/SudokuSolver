@@ -3,7 +3,7 @@
 git add */*.cpp
 git add */*.h
 git add *.sh
-git add README
+git add README.md
 git add CMakeLists.txt
 
 git commit

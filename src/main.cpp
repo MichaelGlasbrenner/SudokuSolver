@@ -1,23 +1,55 @@
 #include "SudokuField.h"
+#include <string.h>
+#include <stdio.h>
 
 void print_start_message();
 
 
-int main()
+int main(int argc, char* argv[])
 {
     print_start_message();
  
     SudokuField the_field;
 
-    the_field.read_from_file("input_field"); // FIXME
+    std::string input_file;
+    
+    if(argc > 1) 
+    {    
+        for(int i=0; i < argc; ++i) 
+        {
+            if(strcmp("-inp", argv[i]) == 0)
+            {
+                if(i+1 >= argc)
+                {
+                    printf("expected input file name after -inp");
+                    exit(-1);
+                }
+                input_file = std::string(argv[i+1]);
+            }    
+        }    
+    }    
+    else 
+    {    
+        printf("too few input arguments \n");
+        printf("call SudokuSolver as follows: \n");
+        printf("./SudokuSolver -inp <input-file-name> \n");
+        exit(-1);
+    } 
+
+    the_field.read_from_file(input_file); // FIXME
 
     the_field.print_values();
-    //the_field.print_values_excluded();
 
-    the_field.solve();
+    bool solved_successfully = the_field.solve();
 
-    the_field.print_values();
-    //the_field.print_values_excluded();
+    if(solved_successfully)
+    {
+       the_field.print_values();
+    }
+    else
+    {
+        printf("\nThe solution could not be determined. \nTry rerunning the program and consider increasing the number of guesses. \n\n");
+    }
 }
 
 

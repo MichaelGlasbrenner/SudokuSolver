@@ -123,7 +123,11 @@ void SudokuField::read_from_file(const std::string& filename)
 
         myfile.close();
     }
-    else std::cout << "Unable to open file";
+    else
+    {
+        std::cout << "Unable to open input file\n\n";
+        exit(-1);
+    }
 }
 
 
@@ -138,7 +142,7 @@ bool SudokuField::solve()
     for(int n_fields_to_guess=1; n_fields_to_guess < (81 - number_of_solved_fields); ++n_fields_to_guess)
     {
        printf("\ntrying to find solution by guessing %d fields \n", n_fields_to_guess);
-       for(int trial=0; trial < 1000; ++trial) // FIXME
+       for(int trial=0; trial < 10000; ++trial) // FIXME
        {
            printf("trial %d \n", trial);
            bool found_solution = this->solve_with_guessing(n_fields_to_guess);
@@ -226,7 +230,7 @@ void SudokuField::apply_guess(int n_fields_to_guess)
         const field& random_field = all_free_fields.at(random_position);
 
         int random_val; 
-        get_random_number(random_val, 1,10);
+        get_random_number(random_val, 1, 9);
 
         printf("setting [%d][%d] to value %d \n", random_field.row, random_field.col, random_val);
         _values[random_field.row][random_field.col] = random_val;
@@ -498,14 +502,14 @@ bool SudokuField::check_consistency()
 
         for(int col=0; col<9; ++col)
         {
-            printf("val[%d]: %d \n", col, _values[row][col] );
+            //printf("val[%d]: %d \n", col, _values[row][col] );
             int value = _values[row][col];
             occurencies[value] += 1;
         }
         
         for(int i=1; i<10; ++i) 
         {
-            printf("occurencies[%d] : %d \n", i, occurencies[i]);
+            //printf("occurencies[%d] : %d \n", i, occurencies[i]);
             if(occurencies[i] > 1) return false;
         }
     }
