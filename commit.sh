@@ -5,5 +5,6 @@ git add */*.h
 git add *.sh
 git add README.md
 git add CMakeLists.txt
+git add */CMakeLists.txt
 
 git commit

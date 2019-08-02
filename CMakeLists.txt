@@ -1,18 +1,13 @@
 cmake_minimum_required(VERSION 3.10.2)
+
 project (SudokuSolver)
 
 # add the headers in ./include to the project
 include_directories(include)
 
-# Find includes in corresponding build directories
-set(CMAKE_INCLUDE_CURRENT_DIR ON) 
+add_subdirectory (src)
 
-# add the cpp files:
-file(GLOB SOURCES "*/*.cpp")
-
-# add the header files: (this is needed for Qt, otherwise the moc compiler is not invoked)
-file(GLOB HEADERS "include/*.h")
-
-add_executable(SudokuSolver ${SOURCES} ${HEADERS}) 
+enable_testing ()
+add_subdirectory (testing)
 
 SET(CMAKE_CXX_FLAGS "-std=c++0x")
